@@ -6,9 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Props = {
   searchQuery: string;
   onSearchChange: (text: string) => void;
+  onAvatarPress: () => void;
 };
 
-export const Header: React.FC<Props> = ({ searchQuery, onSearchChange }) => {
+export const Header: React.FC<Props> = ({ searchQuery, onSearchChange, onAvatarPress }) => {
   const insets = useSafeAreaInsets();
 
   return (
@@ -35,7 +36,7 @@ export const Header: React.FC<Props> = ({ searchQuery, onSearchChange }) => {
         )}
       </View>
       
-      <TouchableOpacity style={styles.avatarButton} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.avatarButton} activeOpacity={0.8} onPress={onAvatarPress}>
         <Text style={styles.avatarText}>RK</Text>
         <View style={styles.badge} />
       </TouchableOpacity>

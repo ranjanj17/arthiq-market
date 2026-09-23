@@ -52,7 +52,11 @@ export const MainLayout: React.FC = () => {
     <View style={styles.appContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Header 
+        searchQuery={searchQuery} 
+        onSearchChange={setSearchQuery} 
+        onAvatarPress={() => setActiveTab('account')}
+      />
 
       <View style={styles.container}>
         {renderContent()}
