@@ -22,7 +22,7 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
     let rawData = scripsData as Stock[];
     
     if (filterSymbols) {
-      rawData = rawData.filter(stock => filterSymbols.includes(stock.symbol));
+      rawData = rawData.filter(stock => filterSymbols.indexOf(stock.symbol) !== -1);
     }
     
     if (!searchQuery) return rawData;

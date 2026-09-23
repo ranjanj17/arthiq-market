@@ -23,7 +23,7 @@ export const StockDetailModal: React.FC<Props> = ({ selectedStock, onClose }) =>
   const buyStock = useUserStore((state) => state.buyStock);
   const account = useUserStore((state) => state.account);
 
-  const isWatchlisted = watchlist.includes(symbol);
+  const isWatchlisted = watchlist.indexOf(symbol) !== -1;
 
   if (!selectedStock) return null;
 

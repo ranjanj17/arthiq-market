@@ -69,8 +69,8 @@ export type UserState = {
   buyStock: (symbol: string, name: string, quantity: number, price: number) => void;
 };
 
-export const useUserStore = create<UserState>()(
-  persist(
+export const useUserStore = create(
+  persist<UserState>(
     (set, get) => ({
       account: {
         name: 'Ranjan Kumar',
@@ -79,16 +79,16 @@ export const useUserStore = create<UserState>()(
       watchlist: [],
       portfolio: [],
 
-      toggleWatchlist: (symbol) => {
+      toggleWatchlist: (symbol: string) => {
         const { watchlist } = get();
-        if (watchlist.includes(symbol)) {
-          set({ watchlist: watchlist.filter((s) => s !== symbol) });
+        if (watchlist.indexOf(symbol) !== -1) {
+          set({ watchlist: watchlist.filter((s: string) => s !== symbol) });
         } else {
           set({ watchlist: [...watchlist, symbol] });
         }
       },
 
-      buyStock: (symbol, name, quantity, price) => {
+      buyStock: (symbol: string, name: string, quantity: number, price: number) => {
         const { portfolio, account } = get();
         const totalCost = quantity * price;
 
@@ -102,7 +102,7 @@ export const useUserStore = create<UserState>()(
         set({ account: { ...account, balance: account.balance - totalCost } });
 
         // Update portfolio
-        const existingItem = portfolio.find((item) => item.symbol === symbol);
+        const existingItem = portfolio.find((item: PortfolioItem) => item.symbol === symbol);
         if (existingItem) {
           // Calculate new average buy price
           const totalSpentBefore = existingItem.quantity * existingItem.averageBuyPrice;
@@ -111,7 +111,7 @@ export const useUserStore = create<UserState>()(
           const newAveragePrice = newTotalSpent / newQuantity;
 
           set({
-            portfolio: portfolio.map((item) =>
+            portfolio: portfolio.map((item: PortfolioItem) =>
               item.symbol === symbol
                 ? { ...item, quantity: newQuantity, averageBuyPrice: newAveragePrice }
                 : item
