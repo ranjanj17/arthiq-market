@@ -21,14 +21,37 @@ export const AccountScreen: React.FC = () => {
 
       {/* Funds Card */}
       <View style={styles.fundsCard}>
+        <View style={styles.fundsHeaderRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="wallet" size={20} color="#1E3A8A" style={{ marginRight: 8 }} />
+            <Text style={styles.fundsTitle}>Trading Balance</Text>
+          </View>
+          <TouchableOpacity>
+            <Text style={styles.viewDetailsText}>View Details</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.fundsRow}>
           <View>
-            <Text style={styles.fundsLabel}>Available Margin</Text>
             <Text style={styles.fundsValue}>₹{account.balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</Text>
+            <Text style={styles.fundsLabel}>Available Margin to Trade</Text>
           </View>
           <TouchableOpacity style={styles.addFundsBtn}>
             <Text style={styles.addFundsText}>ADD FUNDS</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.fundsDetails}>
+          <View style={styles.fundsDetailItem}>
+            <Text style={styles.fundsDetailLabel}>Used Margin</Text>
+            <Text style={styles.fundsDetailValue}>₹0.00</Text>
+          </View>
+          <View style={styles.fundsDetailItem}>
+            <Text style={styles.fundsDetailLabel}>Total Balance</Text>
+            <Text style={styles.fundsDetailValue}>₹{account.balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</Text>
+          </View>
         </View>
       </View>
 
@@ -56,6 +79,18 @@ export const AccountScreen: React.FC = () => {
           <View style={styles.menuLeft}>
             <Ionicons name="document-text-outline" size={22} color="#4B5563" style={styles.menuIcon} />
             <Text style={styles.menuText}>Reports & Statements</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.menuGroup}>
+        <Text style={styles.menuHeader}>PREFERENCES</Text>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <View style={styles.menuLeft}>
+            <Ionicons name="settings-outline" size={22} color="#4B5563" style={styles.menuIcon} />
+            <Text style={styles.menuText}>App Settings</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
         </TouchableOpacity>
@@ -131,23 +166,37 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  fundsRow: {
+  fundsHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  fundsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  viewDetailsText: {
+    fontSize: 13,
+    color: '#1D4ED8',
+    fontWeight: '600',
+  },
+  fundsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  fundsValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
   },
   fundsLabel: {
     fontSize: 13,
     color: '#6B7280',
-    fontWeight: '600',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  fundsValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: '500',
   },
   addFundsBtn: {
     backgroundColor: '#EBF5FF',
@@ -160,6 +209,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 16,
+  },
+  fundsDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  fundsDetailItem: {
+    flex: 1,
+  },
+  fundsDetailLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  fundsDetailValue: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '700',
   },
   menuGroup: {
     backgroundColor: '#ffffff',
