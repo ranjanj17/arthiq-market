@@ -6,6 +6,8 @@ import { StockList } from '../components/StockList/StockList';
 import { StockDetailModal } from '../components/StockDetailModal/StockDetailModal';
 import { WatchlistScreen } from '../screens/WatchlistScreen';
 import { PortfolioScreen } from '../screens/PortfolioScreen';
+import { OrdersScreen } from '../screens/OrdersScreen';
+import { AccountScreen } from '../screens/AccountScreen';
 import { useMarketData } from '../hooks/useMarketData';
 
 export const MainLayout: React.FC = () => {
@@ -33,6 +35,10 @@ export const MainLayout: React.FC = () => {
         );
       case 'portfolio':
         return <PortfolioScreen subscriptionManager={subscriptionManager} />;
+      case 'orders':
+        return <OrdersScreen />;
+      case 'account':
+        return <AccountScreen />;
       default:
         return (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
