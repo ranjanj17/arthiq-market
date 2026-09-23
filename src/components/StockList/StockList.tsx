@@ -1,0 +1,86 @@
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { View, StyleSheet, Text, FlatList, ViewToken } from 'react-native';
+// Removed FlashList for Expo Go compatibility
+import { StockRow } from './StockRow';
+import { Stock } from '../../types/stock';
+import { SubscriptionManager } from '../../services/market-data/SubscriptionManager';
+import { useListStore } from '../../store/listStore';
+import scripsData from '../../data/scrips.json';
+
+const PAGE_SIZE = 20;
+
+type Props = {
+  subscriptionManager: SubscriptionManager;
+  onStockPress: (symbol: string, name: string) => void;
+};
+
+export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress }: Props) => {
+  const masterData = useMemo(() => scripsData as Stock[], []);
+  const allSymbols = useMemo(() => masterData.map((s: Stock) => s.symbol), [masterData]);
+
+  // We maintain the concept of active pages (e.g. 3 pages) for any page-level derived data 
+  // or logic, separate from FlashList virtualization and from precise market subscriptions.
+  // Using useListStore.getState() prevents StockList from re-rendering on every scroll.
+  
+  // Track visible symbols for SubscriptionManager
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    if (viewableItems.length === 0) return;
+    
+    const firstIndex = viewableItems[0].index;
+    const lastIndex = viewableItems[viewableItems.length - 1].index;
+    
+    if (firstIndex == null || lastIndex == null) return;
+    
+    // 1. Update active page window (3 pages) in the global store without re-rendering StockList
+    const currentPage = Math.floor(firstIndex / PAGE_SIZE);
+    const startPage = Math.max(0, currentPage - 1);
+    const endPage = startPage + 3;
+    
+    useListStore.getState().setActivePageRange(
+      startPage * PAGE_SIZE,
+      endPage * PAGE_SIZE
+    );
+    
+    // 2. Update SubscriptionManager visible range
+    const visibleSymbols = viewableItems
+      .map(item => item.item as Stock)
+      .map(stock => stock.symbol);
+      
+    subscriptionManager.updateVisibleRange(visibleSymbols, allSymbols);
+    
+  }, [subscriptionManager, allSymbols]);
+
+  const renderItem = useCallback(({ item }: { item: Stock }) => {
+    return <StockRow symbol={item.symbol} name={item.name} onPress={onStockPress} />;
+  }, [onStockPress]);
+
+  const keyExtractor = useCallback((item: Stock) => item.symbol, []);
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={masterData}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        showsVerticalScrollIndicator={false}
+        getItemLayout={(data, index) => ({ length: 116, offset: 116 * index, index })}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{
+          itemVisiblePercentThreshold: 10,
+          minimumViewTime: 50,
+        }}
+        removeClippedSubviews={true}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  }
+});
