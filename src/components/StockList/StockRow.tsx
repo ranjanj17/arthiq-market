@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMarketStore } from '../../store/marketStore';
 
@@ -34,10 +34,15 @@ const StockRowComponent: React.FC<Props> = ({ symbol, name, onPress }: Props) =>
     ? ['#E6FCEE', '#FFFFFF'] 
     : ['#FEEAEA', '#FFFFFF'];
 
+  const handlePress = () => {
+    Keyboard.dismiss();
+    onPress(symbol, name);
+  };
+
   return (
     <TouchableOpacity 
       activeOpacity={0.8} 
-      onPress={() => onPress(symbol, name)}
+      onPress={handlePress}
       style={styles.container}
     >
       <LinearGradient

@@ -23,7 +23,14 @@ export class SubscriptionManager {
   }
 
   private computeAndApplySubscriptions(visibleSymbols: string[], allSymbols: string[]) {
-    if (visibleSymbols.length === 0) return;
+    if (visibleSymbols.length === 0) {
+      if (this.currentSubscriptions.size > 0) {
+        const toUnsubscribe = Array.from(this.currentSubscriptions);
+        this.provider.unsubscribe(toUnsubscribe);
+        this.currentSubscriptions.clear();
+      }
+      return;
+    }
 
     // We pad the visible range with bufferSize items above and below
     const firstVisibleIndex = allSymbols.indexOf(visibleSymbols[0]);

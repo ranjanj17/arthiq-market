@@ -7,7 +7,8 @@ import { useAppLifecycle } from './useAppLifecycle';
 export const useMarketData = () => {
   // Initialize services once
   const { provider, tickProcessor, subscriptionManager } = useMemo(() => {
-    const prov = new PollingMarketDataProvider(300);
+    // Polling every 1500ms strikes the perfect balance between real-time data and device performance
+    const prov = new PollingMarketDataProvider(1500);
     const processor = new TickProcessor();
     const subManager = new SubscriptionManager(prov, 10); // 10 buffer
     

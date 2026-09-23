@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Text, FlatList, ViewToken } from 'react-native';
+import { View, StyleSheet, Text, FlatList, ViewToken, Keyboard } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 // Removed FlashList for Expo Go compatibility
 import { StockRow } from './StockRow';
 import { Stock } from '../../types/stock';
@@ -67,13 +68,24 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
 
   const keyExtractor = useCallback((item: Stock) => item.symbol, []);
 
+  const renderEmptyComponent = useCallback(() => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="search-outline" size={48} color="#D1D5DB" />
+      <Text style={styles.emptyTitle}>No stocks found</Text>
+      <Text style={styles.emptySubtitle}>We couldn't find any match for "{searchQuery}".</Text>
+    </View>
+  ), [searchQuery]);
+
   return (
     <View style={styles.container}>
       <FlatList
         data={masterData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
+        ListEmptyComponent={renderEmptyComponent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         getItemLayout={(data, index) => ({ length: 116, offset: 116 * index, index })}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{
@@ -94,5 +106,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 100,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    paddingHorizontal: 32,
   }
 });
