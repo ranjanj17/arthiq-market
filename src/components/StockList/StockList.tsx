@@ -14,11 +14,17 @@ type Props = {
   subscriptionManager: SubscriptionManager;
   onStockPress: (symbol: string, name: string) => void;
   searchQuery?: string;
+  filterSymbols?: string[];
 };
 
-export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, searchQuery = '' }: Props) => {
+export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, searchQuery = '', filterSymbols }: Props) => {
   const masterData = useMemo(() => {
-    const rawData = scripsData as Stock[];
+    let rawData = scripsData as Stock[];
+    
+    if (filterSymbols) {
+      rawData = rawData.filter(stock => filterSymbols.includes(stock.symbol));
+    }
+    
     if (!searchQuery) return rawData;
     
     const lowerQuery = searchQuery.toLowerCase();
@@ -26,7 +32,7 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
       stock.symbol.toLowerCase().includes(lowerQuery) || 
       stock.name.toLowerCase().includes(lowerQuery)
     );
-  }, [searchQuery]);
+  }, [searchQuery, filterSymbols]);
 
   const allSymbols = useMemo(() => masterData.map((s: Stock) => s.symbol), [masterData]);
 
