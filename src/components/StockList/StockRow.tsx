@@ -29,10 +29,10 @@ const StockRowComponent: React.FC<Props> = ({ symbol, name, onPress }: Props) =>
   const downColor = '#FF3B30'; // Crisp iOS style red
   const changeColor = isPositive ? upColor : downColor;
   
-  // Very subtle, premium gradient background
+  // Premium gradient background (perfect middle ground)
   const gradientColors = isPositive 
-    ? ['#F0FDF4', '#FFFFFF'] 
-    : ['#FEF2F2', '#FFFFFF'];
+    ? ['#E6FCEE', '#FFFFFF'] 
+    : ['#FEEAEA', '#FFFFFF'];
 
   return (
     <TouchableOpacity 
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     height: 104,
     marginHorizontal: 16,
     marginBottom: 12,
-    borderRadius: 16,
+    borderRadius: 20, // Perfect middle ground
     // Soft premium shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   gradientFill: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 20, // Match outer container
     justifyContent: 'center',
     overflow: 'hidden',
   },

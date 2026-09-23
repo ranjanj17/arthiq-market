@@ -12,10 +12,21 @@ const PAGE_SIZE = 20;
 type Props = {
   subscriptionManager: SubscriptionManager;
   onStockPress: (symbol: string, name: string) => void;
+  searchQuery?: string;
 };
 
-export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress }: Props) => {
-  const masterData = useMemo(() => scripsData as Stock[], []);
+export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, searchQuery = '' }: Props) => {
+  const masterData = useMemo(() => {
+    const rawData = scripsData as Stock[];
+    if (!searchQuery) return rawData;
+    
+    const lowerQuery = searchQuery.toLowerCase();
+    return rawData.filter((stock) => 
+      stock.symbol.toLowerCase().includes(lowerQuery) || 
+      stock.name.toLowerCase().includes(lowerQuery)
+    );
+  }, [searchQuery]);
+
   const allSymbols = useMemo(() => masterData.map((s: Stock) => s.symbol), [masterData]);
 
   // We maintain the concept of active pages (e.g. 3 pages) for any page-level derived data 
@@ -73,6 +84,7 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress }
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={5}
+        contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
       />
     </View>
   );
