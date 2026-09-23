@@ -1,6 +1,53 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import * as SQLite from 'expo-sqlite';
+
+// 1. Initialize SQLite Database synchronously
+const db = SQLite.openDatabaseSync('arthiq.db');
+
+// 2. Create the storage table if it doesn't exist
+db.execSync(`
+  CREATE TABLE IF NOT EXISTS store (
+    key TEXT PRIMARY KEY NOT NULL,
+    value TEXT NOT NULL
+  );
+`);
+
+// 3. Implement the Zustand StateStorage interface using SQLite
+const sqliteStorage: StateStorage = {
+  getItem: (name: string): string | null => {
+    try {
+      const result = db.getFirstSync<{ value: string }>(
+        'SELECT value FROM store WHERE key = ?',
+        [name]
+      );
+      return result ? result.value : null;
+    } catch (error) {
+      console.error('SQLite getItem error:', error);
+      return null;
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    try {
+      db.runSync(
+        'INSERT OR REPLACE INTO store (key, value) VALUES (?, ?)',
+        [name, value]
+      );
+    } catch (error) {
+      console.error('SQLite setItem error:', error);
+    }
+  },
+  removeItem: (name: string): void => {
+    try {
+      db.runSync(
+        'DELETE FROM store WHERE key = ?',
+        [name]
+      );
+    } catch (error) {
+      console.error('SQLite removeItem error:', error);
+    }
+  },
+};
 
 export type PortfolioItem = {
   symbol: string;
@@ -83,7 +130,7 @@ export const useUserStore = create<UserState>()(
     }),
     {
       name: 'user-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => sqliteStorage),
     }
   )
 );
