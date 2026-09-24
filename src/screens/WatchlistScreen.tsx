@@ -11,6 +11,7 @@ type Props = {
 
 export const WatchlistScreen: React.FC<Props> = ({ subscriptionManager, onStockPress }) => {
   const watchlist = useUserStore((state) => state.watchlist);
+  const toggleWatchlist = useUserStore((state) => state.toggleWatchlist);
 
   return (
     <View style={styles.container}>
@@ -19,6 +20,7 @@ export const WatchlistScreen: React.FC<Props> = ({ subscriptionManager, onStockP
           subscriptionManager={subscriptionManager} 
           onStockPress={onStockPress}
           filterSymbols={watchlist}
+          onRemove={toggleWatchlist}
         />
       ) : (
         <View style={styles.emptyContainer}>

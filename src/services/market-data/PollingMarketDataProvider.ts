@@ -16,6 +16,8 @@ export class PollingMarketDataProvider implements MarketDataProvider {
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isFetching: boolean = false;
   private needsRefetch: boolean = false;
+  private consecutive429s: number = 0;
+  
   
   // A list of "callbacks" (functions) that want to be notified when new prices arrive.
   // Right now, the TickProcessor is the only listener.
@@ -116,7 +118,13 @@ export class PollingMarketDataProvider implements MarketDataProvider {
     this.isFetching = true;
     const startTime = Date.now();
     
+    let forcedDelay = 0;
+    
     try {
+      // Add a strict 2-second timeout so a hanging network request never freezes the UI updates
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 2000);
+      
       // Hit the live API for ONLY the symbols currently on screen
       const response = await fetch('https://api.v2.liquide.life/api/markets/ohlc', {
         method: 'POST',
@@ -126,10 +134,20 @@ export class PollingMarketDataProvider implements MarketDataProvider {
           'Pragma': 'no-cache',
           'Expires': '0',
         },
-        body: JSON.stringify({ symbols: symbolsToFetch })
+        body: JSON.stringify({ symbols: symbolsToFetch }),
+        signal: controller.signal
       });
       
+      clearTimeout(fetchTimeout);
+      
       const json = await response.json();
+      
+      if (json.code === 429) {
+        this.consecutive429s += 1;
+        forcedDelay = Math.min(5000, 1000 * this.consecutive429s);
+      } else {
+        this.consecutive429s = 0;
+      }
       
       if (json.status === 'success' && json.message?.data) {
         const rawData: any[] = json.message.data;
@@ -153,8 +171,10 @@ export class PollingMarketDataProvider implements MarketDataProvider {
           });
         }
       }
-    } catch (err) {
-      console.warn('Polling error:', err);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.warn('Polling error:', err);
+      }
     } finally {
       this.isFetching = false;
       if (this.timeoutId) clearTimeout(this.timeoutId);
@@ -169,7 +189,7 @@ export class PollingMarketDataProvider implements MarketDataProvider {
         }, waitTimeMs);
       } else {
         // Market is open: calculate next polling loop
-        if (this.needsRefetch) {
+        if (this.needsRefetch && forcedDelay === 0) {
           this.needsRefetch = false;
           // If we need a refetch due to scrolling, trigger it instantly
           this.timeoutId = setTimeout(() => {
@@ -178,7 +198,9 @@ export class PollingMarketDataProvider implements MarketDataProvider {
         } else {
           // If the network request took 100ms, we only wait 400ms for the next loop to keep it exactly 500ms.
           const elapsed = Date.now() - startTime;
-          const nextDelay = Math.max(0, this.pollingIntervalMs - elapsed);
+          const nextDelay = forcedDelay > 0 
+            ? forcedDelay 
+            : Math.max(0, this.pollingIntervalMs - elapsed);
           
           this.timeoutId = setTimeout(() => {
             this.fetchData();

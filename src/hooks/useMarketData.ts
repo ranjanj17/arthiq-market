@@ -7,11 +7,11 @@ import { useAppLifecycle } from './useAppLifecycle';
 export const useMarketData = () => {
   // Initialize services once
   const { provider, tickProcessor, subscriptionManager } = useMemo(() => {
-    // 300ms polling interval for faster price updates
-    const prov = new PollingMarketDataProvider(300);
+    // 500ms polling interval for ultra-fast price updates (protected by adaptive 429 backoff)
+    const prov = new PollingMarketDataProvider(500);
     const processor = new TickProcessor();
-    const subManager = new SubscriptionManager(prov, 10); // 10 buffer
-    
+    const subManager = new SubscriptionManager(prov, 15); // 15 buffer (max ~40 items total)
+
     return {
       provider: prov,
       tickProcessor: processor,
@@ -24,7 +24,7 @@ export const useMarketData = () => {
     const unsubscribe = provider.onTick((ticks: any) => {
       tickProcessor.processTicks(ticks);
     });
-    
+
     provider.connect();
     tickProcessor.start();
 

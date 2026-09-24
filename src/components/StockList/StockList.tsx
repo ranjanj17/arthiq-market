@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import { View, StyleSheet, Text, FlatList, ViewToken, Keyboard } from 'react-native';
+import { View, StyleSheet, Text, ViewToken, Keyboard } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { StockRow } from './StockRow';
 import { Stock } from '../../types/stock';
@@ -14,21 +15,27 @@ type Props = {
   onStockPress: (symbol: string, name: string) => void;
   searchQuery?: string;
   filterSymbols?: string[];
+  onRemove?: (symbol: string) => void;
 };
 
-export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, searchQuery = '', filterSymbols }: Props) => {
+const VIEWABILITY_CONFIG = {
+  itemVisiblePercentThreshold: 10,
+  minimumViewTime: 10,
+};
+
+export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, searchQuery = '', filterSymbols, onRemove }: Props) => {
   const masterData = useMemo(() => {
     let rawData = scripsData as Stock[];
-    
+
     if (filterSymbols) {
       rawData = rawData.filter(stock => filterSymbols.indexOf(stock.symbol) !== -1);
     }
-    
+
     if (!searchQuery) return rawData;
-    
+
     const lowerQuery = searchQuery.toLowerCase();
-    return rawData.filter((stock) => 
-      stock.symbol.toLowerCase().includes(lowerQuery) || 
+    return rawData.filter((stock) =>
+      stock.symbol.toLowerCase().includes(lowerQuery) ||
       stock.name.toLowerCase().includes(lowerQuery)
     );
   }, [searchQuery, filterSymbols]);
@@ -42,42 +49,46 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
   // FIRE-ONCE MOUNT FIX: Guarantee the first screen updates immediately without waiting for scroll
   useEffect(() => {
     if (allSymbols.length > 0) {
-      const initialVisible = allSymbols.slice(0, 15);
+      const initialVisible = allSymbols.slice(0, 20);
       subscriptionManager.updateVisibleRange(initialVisible, allSymbols);
     }
   }, [allSymbols, subscriptionManager]);
-  
+
   // Track visible symbols for SubscriptionManager
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length === 0) return;
+
+    const indices = viewableItems
+      .map(item => item.index)
+      .filter((idx): idx is number => idx != null);
+      
+    if (indices.length === 0) return;
     
-    const firstIndex = viewableItems[0].index;
-    const lastIndex = viewableItems[viewableItems.length - 1].index;
-    
-    if (firstIndex == null || lastIndex == null) return;
+    const firstIndex = Math.min(...indices);
+    const lastIndex = Math.max(...indices);
     
     // 1. Update active page window (3 pages) in the global store without re-rendering StockList
     const currentPage = Math.floor(firstIndex / PAGE_SIZE);
     const startPage = Math.max(0, currentPage - 1);
     const endPage = startPage + 3;
-    
+
     useListStore.getState().setActivePageRange(
       startPage * PAGE_SIZE,
       endPage * PAGE_SIZE
     );
-    
+
     // 2. Update SubscriptionManager visible range
     const visibleSymbols = viewableItems
       .map(item => item.item as Stock)
       .map(stock => stock.symbol);
-      
+
     subscriptionManager.updateVisibleRange(visibleSymbols, allSymbols);
-    
+
   }, [subscriptionManager, allSymbols]);
 
   const renderItem = useCallback(({ item }: { item: Stock }) => {
-    return <StockRow symbol={item.symbol} name={item.name} onPress={onStockPress} />;
-  }, [onStockPress]);
+    return <StockRow symbol={item.symbol} name={item.name} onPress={onStockPress} onRemove={onRemove} />;
+  }, [onStockPress, onRemove]);
 
   const keyExtractor = useCallback((item: Stock) => item.symbol, []);
 
@@ -91,7 +102,7 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
 
   return (
     <View style={styles.container}>
-      <FlatList
+      <FlashList
         data={masterData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
@@ -99,16 +110,9 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        getItemLayout={(data, index) => ({ length: 116, offset: 116 * index, index })}
+        estimatedItemSize={116}
         onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{
-          itemVisiblePercentThreshold: 10,
-          minimumViewTime: 50,
-        }}
-        removeClippedSubviews={true}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={10}
+        viewabilityConfig={VIEWABILITY_CONFIG}
         contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
       />
     </View>

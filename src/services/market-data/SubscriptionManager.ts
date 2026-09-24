@@ -11,8 +11,7 @@ export class SubscriptionManager {
   // Keeps track of the exact stock symbols we are currently asking the API for.
   private currentSubscriptions: Set<string> = new Set();
   
-  // A timer used to delay network requests when the user is speed-scrolling.
-  private debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+  
   
   // We fetch a few extra stocks above and below the screen so there's no lag when scrolling.
   private bufferSize: number;
@@ -28,17 +27,9 @@ export class SubscriptionManager {
    * @param allSymbols The entire master list of 5000+ stocks in the current search/filter.
    */
   public updateVisibleRange(visibleSymbols: string[], allSymbols: string[]) {
-    // If the user is speed-scrolling, they are triggering this function hundreds of times a second.
-    // We cancel any pending network requests so we don't crash the app.
-    if (this.debounceTimeout) {
-      clearTimeout(this.debounceTimeout);
-    }
-    
-    // We wait for 16 milliseconds (about 1 frame). If the user hasn't scrolled again in that time, 
-    // we assume they have stopped scrolling, and we finally calculate what to subscribe to!
-    this.debounceTimeout = setTimeout(() => {
-      this.computeAndApplySubscriptions(visibleSymbols, allSymbols);
-    }, 16);
+    // We instantly compute subscriptions. The PollingMarketDataProvider handles 
+    // network throttling so we don't spam the API.
+    this.computeAndApplySubscriptions(visibleSymbols, allSymbols);
   }
 
   /**
@@ -56,11 +47,14 @@ export class SubscriptionManager {
       return;
     }
 
-    // Step 1: Find the exact index of the top-most and bottom-most visible stocks.
-    const firstVisibleIndex = allSymbols.indexOf(visibleSymbols[0]);
-    const lastVisibleIndex = allSymbols.indexOf(visibleSymbols[visibleSymbols.length - 1]);
-
-    if (firstVisibleIndex === -1 || lastVisibleIndex === -1) return;
+    // Step 1: Find the exact index of the top-most and bottom-most visible stocks safely.
+    // FlashList viewableItems are not always perfectly ordered, so we must calculate min/max.
+    const indices = visibleSymbols.map(sym => allSymbols.indexOf(sym)).filter(i => i !== -1);
+    
+    if (indices.length === 0) return;
+    
+    const firstVisibleIndex = Math.min(...indices);
+    const lastVisibleIndex = Math.max(...indices);
 
     // Step 2: Add our 'buffer'. If stocks 10 through 20 are visible, we actually want to 
     // subscribe to stocks 0 through 30. This pre-loads the prices just off-screen!

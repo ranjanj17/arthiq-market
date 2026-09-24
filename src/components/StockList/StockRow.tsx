@@ -1,15 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useMarketStore } from '../../store/marketStore';
 
 type Props = {
   symbol: string;
   name: string;
   onPress: (symbol: string, name: string) => void;
+  onRemove?: (symbol: string) => void;
 };
 
-const StockRowComponent: React.FC<Props> = ({ symbol, name, onPress }: Props) => {
+const StockRowComponent: React.FC<Props> = ({ symbol, name, onPress, onRemove }: Props) => {
   // Select only the tick for this specific symbol
   const tick = useMarketStore((state: any) => state.prices[symbol]);
 
@@ -54,7 +56,21 @@ const StockRowComponent: React.FC<Props> = ({ symbol, name, onPress }: Props) =>
         <View style={styles.content}>
           {/* Left Side: Company Info */}
           <View style={styles.left}>
-            <Text style={styles.symbol} numberOfLines={1}>{symbol}</Text>
+            <View style={styles.symbolRow}>
+              <Text style={styles.symbol} numberOfLines={1}>{symbol}</Text>
+              {onRemove && (
+                <TouchableOpacity 
+                  style={styles.starBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onRemove(symbol);
+                  }}
+                >
+                  <Ionicons name="star" size={22} color="#F59E0B" />
+                </TouchableOpacity>
+              )}
+            </View>
             <Text style={styles.name} numberOfLines={2}>{name}</Text>
           </View>
           
@@ -127,12 +143,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 110,
   },
+  symbolRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   symbol: {
     fontSize: 18,
     fontWeight: '800',
     color: '#1A1C20',
-    marginBottom: 6,
     letterSpacing: 0.2,
+  },
+  starBtn: {
+    marginLeft: 8,
+    padding: 2,
   },
   name: {
     fontSize: 13,
