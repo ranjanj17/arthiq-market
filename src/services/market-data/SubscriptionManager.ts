@@ -34,11 +34,11 @@ export class SubscriptionManager {
       clearTimeout(this.debounceTimeout);
     }
     
-    // We wait for 100 milliseconds. If the user hasn't scrolled again in that time, 
+    // We wait for 16 milliseconds (about 1 frame). If the user hasn't scrolled again in that time, 
     // we assume they have stopped scrolling, and we finally calculate what to subscribe to!
     this.debounceTimeout = setTimeout(() => {
       this.computeAndApplySubscriptions(visibleSymbols, allSymbols);
-    }, 100);
+    }, 16);
   }
 
   /**

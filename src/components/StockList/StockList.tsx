@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { View, StyleSheet, Text, FlatList, ViewToken, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-// Removed FlashList for Expo Go compatibility
 import { StockRow } from './StockRow';
 import { Stock } from '../../types/stock';
 import { SubscriptionManager } from '../../services/market-data/SubscriptionManager';
@@ -39,6 +38,14 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
   // We maintain the concept of active pages (e.g. 3 pages) for any page-level derived data 
   // or logic, separate from FlashList virtualization and from precise market subscriptions.
   // Using useListStore.getState() prevents StockList from re-rendering on every scroll.
+
+  // FIRE-ONCE MOUNT FIX: Guarantee the first screen updates immediately without waiting for scroll
+  useEffect(() => {
+    if (allSymbols.length > 0) {
+      const initialVisible = allSymbols.slice(0, 15);
+      subscriptionManager.updateVisibleRange(initialVisible, allSymbols);
+    }
+  }, [allSymbols, subscriptionManager]);
   
   // Track visible symbols for SubscriptionManager
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -101,7 +108,7 @@ export const StockList: React.FC<Props> = ({ subscriptionManager, onStockPress, 
         removeClippedSubviews={true}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
-        windowSize={5}
+        windowSize={10}
         contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
       />
     </View>

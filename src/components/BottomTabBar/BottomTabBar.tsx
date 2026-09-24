@@ -30,8 +30,7 @@ export const BottomTabBar: React.FC<Props> = ({ activeTab, onTabChange }) => {
           {isActive && (
             <LinearGradient
               colors={['#FFF1F2', '#FFE4E6']} // Soft pink gradient background
-              style={StyleSheet.absoluteFillObject}
-              borderRadius={16}
+              style={[StyleSheet.absoluteFill, { borderRadius: 16 }]}
             />
           )}
           <Ionicons name={iconName} size={22} color={color} />

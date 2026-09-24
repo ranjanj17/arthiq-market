@@ -15,6 +15,7 @@ export class PollingMarketDataProvider implements MarketDataProvider {
   private pollingIntervalMs: number;
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private isFetching: boolean = false;
+  private needsRefetch: boolean = false;
   
   // A list of "callbacks" (functions) that want to be notified when new prices arrive.
   // Right now, the TickProcessor is the only listener.
@@ -57,8 +58,13 @@ export class PollingMarketDataProvider implements MarketDataProvider {
     }
     // Optimization: If a user scrolls, we instantly trigger a fetch so they don't 
     // have to wait for the next 500ms cycle to see the first price.
-    if (changed && this.isConnected && !this.isFetching) {
-      this.fetchData();
+    if (changed && this.isConnected) {
+      if (this.isFetching) {
+        // If we are currently fetching, flag that we need to instantly fetch again when done.
+        this.needsRefetch = true;
+      } else {
+        this.fetchData();
+      }
     }
   }
 
@@ -116,6 +122,9 @@ export class PollingMarketDataProvider implements MarketDataProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
         body: JSON.stringify({ symbols: symbolsToFetch })
       });
@@ -160,13 +169,21 @@ export class PollingMarketDataProvider implements MarketDataProvider {
         }, waitTimeMs);
       } else {
         // Market is open: calculate next polling loop
-        // If the network request took 100ms, we only wait 400ms for the next loop to keep it exactly 500ms.
-        const elapsed = Date.now() - startTime;
-        const nextDelay = Math.max(0, this.pollingIntervalMs - elapsed);
-        
-        this.timeoutId = setTimeout(() => {
-          this.fetchData();
-        }, nextDelay);
+        if (this.needsRefetch) {
+          this.needsRefetch = false;
+          // If we need a refetch due to scrolling, trigger it instantly
+          this.timeoutId = setTimeout(() => {
+            this.fetchData();
+          }, 0);
+        } else {
+          // If the network request took 100ms, we only wait 400ms for the next loop to keep it exactly 500ms.
+          const elapsed = Date.now() - startTime;
+          const nextDelay = Math.max(0, this.pollingIntervalMs - elapsed);
+          
+          this.timeoutId = setTimeout(() => {
+            this.fetchData();
+          }, nextDelay);
+        }
       }
     }
   }
