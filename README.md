@@ -1,100 +1,178 @@
 # 📈 Arthiq Market
 
-> A high-performance, production-ready React Native Fintech application focused on smooth scrolling, real-time market polling, and optimized rendering.
+> A high-performance, production-ready React Native Fintech application focused on real-time market polling, optimized list rendering, and robust state persistence.
 
 ![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
-
-Arthiq Market is a highly optimized stock market simulation app. It pulls live Indian Stock Market (NSE/BSE) data, allows users to simulate buying/selling shares with a ₹1,00,000 virtual balance, and tracks real-time Day P&L. 
-
-What sets this project apart is its **Performance Architecture**: it handles massive lists of financial instruments by dynamically tracking scroll viewability and selectively subscribing *only* to the data that is currently on-screen, ensuring 60fps scrolling and minimizing network overhead.
+![Zustand](https://img.shields.io/badge/Zustand-4A4A55?style=for-the-badge&logo=react&logoColor=white)
 
 ---
 
-## 🌟 Key Features
+## 📑 Table of Contents
 
-* **Real-time Market Polling:** Syncs with live market data every 500ms using a highly optimized HTTP polling engine.
-* **Scroll-Aware Subscriptions:** The networking layer talks to the UI layer. As you scroll, it tracks exactly which stocks are visible on screen and updates the API payload to *only* request data for those specific symbols.
-* **Smart Sleep Mode:** Detects IST timezone and Indian Market Hours (9:15 AM - 3:30 PM). Automatically puts the polling engine to sleep during nights and weekends to save device battery and bandwidth.
-* **Embedded SQLite Engine:** Ripped out the standard 6MB capped `AsyncStorage` and implemented a custom `Zustand` persistence layer over `expo-sqlite`, allowing the app to scale to gigabytes of transaction history.
-* **Simulated Trading Engine:** Place buy orders, automatically deduct margin, and watch your Portfolio's Day P&L tick in real-time.
-* **Premium Fintech UI:** Modeled after top-tier brokers (like Angel One) with micro-animations, glassmorphism hints, and a bottom navigation system.
+- [📌 Overview](#-overview)
+- [👤 How It Works — Simple Explanation](#-how-it-works--simple-explanation)
+- [🔄 Application Flow](#-application-flow)
+- [🏗️ Architecture (Technical Deep Dive)](#-architecture-technical-deep-dive)
+- [🔴 Real-Time Update Flow](#-real-time-update-flow)
+- [⚡ Performance Engineering](#-performance-engineering)
+- [🗂️ Project Structure](#-project-structure)
+- [🛠️ Technology Stack](#️-technology-stack)
+- [🚀 Installation & Setup](#-installation--setup)
 
 ---
 
-## 🏗️ Architecture & Data Flow
+## 📌 Overview
 
-### Real-Time Update Flow
+Arthiq Market is a simulated trading platform built for mobile. It pulls live Indian Stock Market (NSE/BSE) data, allows users to manage a virtual portfolio starting with a ₹1,00,000 balance, and tracks real-time Day P&L. 
 
-The app maintains a strict separation between the volatile market data and the persisted user data.
+The application was built as a masterclass in **React Native Performance**. It efficiently manages a master list of 5,000+ stocks, updates prices at 500ms intervals, and persists thousands of user interactions directly to a local SQLite database, completely bypassing traditional storage bottlenecks.
+
+---
+
+## 👤 How It Works — Simple Explanation
+
+*If you are a non-technical reader, product manager, or designer, this section is for you.*
+
+**What does the user see?**
+When you open Arthiq Market, you are greeted with a beautiful, scrolling list of Indian stocks. Prices flash green and red as the market moves live. You can tap a star to add a stock to your Watchlist, or tap the stock itself to "buy" it using your virtual money. The Portfolio tab shows you exactly how much money you've made or lost today.
+
+**How does the app stay so fast with thousands of stocks?**
+Think of the application as a **Smart Camera**. Even though there are 5,000 stocks in the app's database, your phone screen can only physically show about 6 stocks at a time. 
+
+Instead of asking the server, *"Send me the live prices for all 5,000 stocks every second"* (which would melt your battery and drain your internet data), the app tracks exactly where your eyes are looking. If you are looking at Reliance and TCS, the app securely whispers to the server: *"Only send me updates for Reliance and TCS."* 
+
+When you scroll down, the app instantly updates its request to match the new stocks on your screen. 
+
+**What if I scroll too fast?**
+If you scroll like a maniac, the server might say *"Whoa, slow down!"* (This is called a Rate Limit). The app handles this gracefully using a **Speed Limit Manager**. It quietly pauses updates for a couple of seconds, lets the server catch its breath, and automatically resumes lightning-fast price updates without crashing or showing ugly error messages.
+
+---
+
+## 🔄 Application Flow
 
 ```mermaid
-flowchart TD
-    subgraph UI Layer
-        A[StockList ScrollView] -->|onViewableItemsChanged| B(SubscriptionManager)
-    end
-    
-    subgraph Data Layer
-        B -->|Debounced Set Diff| C[PollingMarketDataProvider]
-        C -->|POST /ohlc 500ms| D[(Liquide.life API)]
-        D -->|JSON Ticks| E[TickProcessor]
-        E -->|Atomic State Commit| F((Zustand MarketStore))
-    end
-    
-    subgraph Render Layer
-        F -->|Slice Selector| G[StockRow]
-        G -->|React.memo| H[Minimal UI Re-render]
-    end
+flowchart LR
+    User[👤 User]
+    App[📱 Arthiq App]
+    API[📊 Liquide Live API]
+    UI[🖥️ Stock Feed & Portfolio]
+    DB[💾 SQLite Database]
+
+    User -->|Opens App| App
+    App -->|Requests ONLY visible stocks| API
+    API -->|Sends 500ms Price Ticks| App
+    App -->|Updates specifically changed rows| UI
+    User -->|Buys Stock / Watchlists| App
+    App -->|Saves instantly| DB
 ```
 
-1. **User Scrolls:** `FlatList` triggers a viewability callback.
-2. **Subscription Manager:** Calculates the exact diff of what stocks just entered/left the screen (with a ±10 item buffer) and debounces the payload.
-3. **Data Provider:** Polls the API every 500ms for *only* the subscribed symbols.
-4. **Tick Processor:** Batches all incoming ticks into a single dictionary and commits one atomic update to `Zustand`.
-5. **Component Render:** Individual `StockRow` components are wrapped in `React.memo` and use atomic slice selectors (`useMarketStore(s => s.prices[symbol])`). Only the specific rows that had a price change will re-render.
+---
+
+## 🏗️ Architecture (Technical Deep Dive)
+
+The application enforces a strict separation of concerns between the **Volatile Data Layer** (market prices) and the **Persistent Data Layer** (user holdings).
+
+### The UI Layer
+The application eschews heavy navigation libraries (like `react-navigation`) in favor of a lightweight, highly-controlled `MainLayout` that unmounts and remounts views based on a simple enum state. This reduces memory footprint and guarantees immediate interaction responsiveness.
+
+### The Storage Layer
+Traditional React Native apps use `AsyncStorage`. However, on Android, `AsyncStorage` has a hard 6MB limit per database. To ensure the app can handle gigabytes of transaction history, we built a custom `StateStorage` interface for Zustand that intercepts state mutations and synchronously writes them to `expo-sqlite`.
+
+### The Networking Layer
+Instead of maintaining an expensive WebSocket connection, the app simulates a WebSocket using an aggressive **500ms HTTP Polling Engine**. To ensure this is performant, the payload size is strictly controlled via Viewability Subscriptions.
 
 ---
 
-## ⚡ Performance Breakdown
+## 🔴 Real-Time Update Flow
 
-| Area | Optimization Technique | Benefit |
-|------|------------------------|---------|
-| **List Rendering** | `FlatList` virtualization, `getItemLayout`, `removeClippedSubviews` | Ensures 60fps scrolling even with massive 5,000+ item master JSON lists. |
-| **Networking** | Viewability Tracking & Payload Subsetting | The app never fetches data for off-screen items, cutting network payload sizes by 99%. |
-| **State Management** | Atomic Zustand Commits + `React.memo` | Prevents the entire list from re-rendering every 500ms when a single stock price ticks. |
-| **Battery Life** | Timezone-aware Polling Suspension | The app physically stops all network requests when the NSE/BSE market is closed. |
-| **Storage Limits** | Custom `expo-sqlite` Zustand Engine | Bypasses Android's 6MB `AsyncStorage` hard-limit, enabling infinite portfolio scaling. |
-
----
-
-## 📂 Project Structure
+This is the exact sequence of events when stock data arrives:
 
 ```text
-arthiq-market/
-├── src/
-│   ├── components/      # Reusable UI (StockRow, StockDetailModal, Header, BottomTabBar)
-│   ├── screens/         # Main views (PortfolioScreen, WatchlistScreen, AccountScreen)
-│   ├── layouts/         # Layout wrappers (MainLayout manages tab switching)
-│   ├── store/           # Zustand stores (marketStore, userStore, listStore)
-│   ├── services/        # Business logic (SubscriptionManager, PollingMarketDataProvider)
-│   ├── utils/           # Helpers (marketTime calculations)
-│   ├── types/           # TypeScript interfaces
-│   └── data/            # Static JSON mock/seed data
-├── App.tsx              # Application Entry Point
-├── package.json         
-└── README.md
+Liquide Server POST /ohlc
+        ↓
+PollingMarketDataProvider (Receives JSON array)
+        ↓
+TickProcessor (Transforms array into a batched Dictionary)
+        ↓
+Zustand marketStore (Atomic State Update)
+        ↓
+Zustand Slice Selectors inside StockRow.tsx
+        ↓
+React.memo (Only rows with actual price changes are re-rendered)
 ```
+
+1. **Batching:** The `TickProcessor` combines all incoming ticks into a single `Record<string, MarketTick>`.
+2. **Atomic Commit:** It commits this dictionary to Zustand in one single move. This prevents the UI from trying to re-render 15 separate times for 15 different stock updates, completely eliminating UI tearing.
+
+---
+
+## ⚡ Performance Engineering
+
+This repository implements several high-level performance optimizations:
+
+### 1. Viewability Subscriptions (The 99% Payload Reduction)
+**What it is:** The `SubscriptionManager` bridges the `FlashList` to the `PollingMarketDataProvider`. 
+**Why it was needed:** Fetching 5,000 live prices every 500ms is impossible on a mobile network.
+**How it works:** As the user scrolls, `onViewableItemsChanged` fires. The manager calculates the exact array of visible symbols, adds a ±15 item off-screen buffer (so scrolling feels instant), and updates the active subscription. The API only receives a payload of ~30 symbols at any given time.
+
+### 2. Adaptive Rate-Limit Backoff
+**What it is:** A self-healing networking layer.
+**Why it was needed:** If a user scrolls violently, the viewability callbacks can trigger rapid HTTP requests, tripping the API's `429 Too Many Requests` limit.
+**How it works:** If a `429` is caught, the app dynamically calculates a backoff delay (`consecutive429s * 1000ms`), pauses the polling loop, and seamlessly resumes at the ultra-fast 500ms rate once the server cools down.
+
+### 3. Timezone-Aware Polling Suspension
+**What it is:** A massive battery-saver feature.
+**How it works:** The `isMarketOpen()` utility checks if the current IST time is between 9:15 AM and 3:30 PM on a weekday. If the market is closed, the polling engine calculates the exact milliseconds until the next opening bell and puts the network thread to sleep, preventing thousands of useless background requests.
+
+### 4. Zero-Waste Rendering
+**What it is:** `StockRow.tsx` is wrapped in `React.memo` and consumes state via an atomic selector: `useMarketStore(state => state.prices[symbol])`.
+**How it works:** If the API returns a new timestamp but the price hasn't actually changed, Zustand ignores the update. Even if the price does change, *only that specific row* re-renders. The rest of the 4,999 items in the list remain completely untouched by the React reconciler.
+
+---
+
+## 🗂️ Project Structure
+
+```text
+src/
+├── components/         # Reusable UI (StockRow, StockDetailModal, Header, etc.)
+├── layouts/            # Custom navigation container (MainLayout)
+├── screens/            # Application Views (Portfolio, Watchlist, etc.)
+├── services/           
+│   └── market-data/    # The polling engine and subscription management
+├── store/              # Zustand state (userStore.ts, marketStore.ts)
+├── types/              # Global TypeScript interfaces
+└── utils/              # Pure functions (market time calculations)
+```
+
+| Directory | Purpose |
+| --- | --- |
+| `services` | Completely decoupled from React. Handles raw data fetching and API throttling. |
+| `store` | The single source of truth. Bridges the gap between raw services and UI components. |
+| `layouts` | Replaces complex Navigation libraries with a fast, lightweight render switch. |
+
+---
+
+## 🛠️ Technology Stack
+
+* **React Native (v0.74+):** The core mobile framework.
+* **Expo:** Used for rapid development, utilizing managed bare workflow elements.
+* **TypeScript:** End-to-end type safety for API responses and component props.
+* **Zustand:** Ultra-fast, boilerplate-free state management.
+* **@shopify/flash-list:** Hardware-accelerated list recycling (avoids FlatList memory leaks).
+* **expo-sqlite:** Industrial-grade local persistence engine.
+* **expo-linear-gradient:** For premium, native UI aesthetics.
 
 ---
 
 ## 🚀 Installation & Setup
 
 ### Prerequisites
-- Node.js (v18+)
+- Node.js (v18 or higher)
 - npm or yarn
-- Expo Go app on your physical device (recommended for testing)
+- Expo Go application on your physical device (iOS or Android)
 
 ### 1. Clone Repository
 ```bash
@@ -112,23 +190,13 @@ npm install
 npx expo start
 ```
 
-Scan the generated QR code with your iPhone's camera or the Expo Go app on Android to launch the application.
+Press `i` in the terminal to open an iOS simulator, `a` to open an Android emulator, or scan the QR code with the Expo Go app on your physical smartphone.
 
 ---
 
-## 🧠 Key Engineering Decisions
+## 🗺️ Future Improvements
 
-### Why Polling instead of WebSockets?
-While WebSockets are ideal for trading apps, public robust WebSockets are often heavily rate-limited or require paid API keys. We engineered a highly-optimized HTTP polling system that simulates a WebSocket stream by hitting a REST endpoint (`/ohlc`) every 500ms. By strictly limiting the payload to *only visible items*, the network overhead remains negligible.
-
-### Why SQLite over AsyncStorage?
-During development, the app utilized `AsyncStorage` via Zustand's `persist` middleware. However, on Android, `AsyncStorage` has a strict 6MB hard limit. To future-proof the application for thousands of portfolio transactions, we wrote a custom Zustand `StateStorage` engine that seamlessly intercepts state changes and writes them synchronously to an `expo-sqlite` table.
-
-### Why FlatList over FlashList?
-While Shopify's `FlashList` offers superior recycling performance, it includes native C++ modules that are not universally compatible with the standard Expo Go client. To ensure the app can be run instantly by anyone without needing a custom EAS development build, we hyper-optimized the standard React Native `FlatList`.
-
----
-
-## 🛡️ License
-
-No license file is currently included in the repository.
+While this app is highly optimized, future iterations could include:
+1. **WebSockets Integration:** Replacing the HTTP Polling engine with a persistent WSS connection if a dedicated backend socket server becomes available.
+2. **Reanimated Swipeables:** Adding `react-native-gesture-handler` and `react-native-reanimated` to implement 60fps swipe-to-delete gestures on Watchlist rows.
+3. **Chart Integration:** Adding a library like `react-native-wagmi-charts` to plot historical OHLC data on the Stock Detail Modal.
