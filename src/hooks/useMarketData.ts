@@ -7,8 +7,8 @@ import { useAppLifecycle } from './useAppLifecycle';
 export const useMarketData = () => {
   // Initialize services once
   const { provider, tickProcessor, subscriptionManager } = useMemo(() => {
-    // 500ms polling interval for ultra-fast price updates (protected by adaptive 429 backoff)
-    const prov = new PollingMarketDataProvider(500);
+    // 1000ms polling interval. (500ms triggers constant 429 rate limit bounces from the API, causing it to actually be slower)
+    const prov = new PollingMarketDataProvider(1000);
     const processor = new TickProcessor();
     const subManager = new SubscriptionManager(prov, 15); // 15 buffer (max ~40 items total)
 

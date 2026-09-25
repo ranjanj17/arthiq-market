@@ -121,9 +121,9 @@ export class PollingMarketDataProvider implements MarketDataProvider {
     let forcedDelay = 0;
     
     try {
-      // Add a strict 2-second timeout so a hanging network request never freezes the UI updates
+      // Add a 5-second timeout so a hanging network request never freezes the UI updates forever
       const controller = new AbortController();
-      const fetchTimeout = setTimeout(() => controller.abort(), 2000);
+      const fetchTimeout = setTimeout(() => controller.abort(), 5000);
       
       // Hit the live API for ONLY the symbols currently on screen
       const response = await fetch('https://api.v2.liquide.life/api/markets/ohlc', {
